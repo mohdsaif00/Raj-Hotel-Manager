@@ -1,96 +1,74 @@
-# Workspace
+# Raj Hotel Management App
 
 ## Overview
+A full production-level Hotel Management Mobile App built for "Raj Hotel" using Expo React Native, Node.js + Express backend, PostgreSQL (Neon DB), TanStack React Query, and Cloudinary for image uploads.
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+## Architecture
+- **Frontend**: Expo React Native (Expo Router) — `artifacts/raj-hotel/`
+- **Backend**: Node.js + Express API server — `artifacts/api-server/`
+- **Database**: PostgreSQL (Neon DB) via Drizzle ORM — `lib/db/`
+- **Image Storage**: Cloudinary (via `CLOUDINARY_URL` secret)
 
-## Stack
+## Features
+- **Auth**: JWT-based login/register, role-based access (admin/customer)
+- **Rooms**: List, search, filter rooms; detailed view with date picker; book rooms with double-booking prevention
+- **Bookings**: View all bookings, filter by status (pending/confirmed/rejected), booking detail view
+- **Payments**: QR code payment display, screenshot upload for verification, payment status tracking
+- **Food Ordering**: Full room service menu, order tracking
+- **Admin Panel**: Dashboard with analytics/charts, CRUD rooms with image upload, approve/reject bookings & payments, mark orders as delivered
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+## Color Theme
+- Primary: `#1A3C5E` (Navy Blue)
+- Accent: `#C9A84C` (Gold)
 
-## Structure
+## Admin Credentials
+- Email: `admin@rajhotel.com`
+- Password: `123456`
 
-```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
-```
+## Key Files
+- `artifacts/raj-hotel/app/_layout.tsx` — Root layout with providers
+- `artifacts/raj-hotel/app/(tabs)/_layout.tsx` — Tab layout with auth guard
+- `artifacts/raj-hotel/app/(tabs)/index.tsx` — Home screen
+- `artifacts/raj-hotel/app/(tabs)/rooms.tsx` — Rooms list
+- `artifacts/raj-hotel/app/(tabs)/bookings.tsx` — Bookings list
+- `artifacts/raj-hotel/app/(tabs)/food.tsx` — Food ordering
+- `artifacts/raj-hotel/app/(tabs)/admin.tsx` — Admin panel
+- `artifacts/raj-hotel/app/room/[id].tsx` — Room detail + booking
+- `artifacts/raj-hotel/app/booking/[id].tsx` — Booking detail
+- `artifacts/raj-hotel/app/payment/[id].tsx` — Payment screen
+- `artifacts/raj-hotel/lib/api.ts` — API client + types
+- `artifacts/raj-hotel/context/AuthContext.tsx` — Auth state
+- `artifacts/api-server/src/routes/` — All API routes
+- `lib/db/src/schema/` — Database schema (Drizzle ORM)
 
-## TypeScript & Composite Projects
+## API Endpoints
+- `POST /api/auth/login` — Login
+- `POST /api/auth/signup` — Register
+- `GET /api/auth/me` — Get current user
+- `GET /api/rooms` — List rooms
+- `POST /api/rooms` — Create room (admin)
+- `PUT /api/rooms/:id` — Update room (admin)
+- `DELETE /api/rooms/:id` — Delete room (admin)
+- `GET /api/bookings` — List bookings (filtered by role)
+- `POST /api/book-room` — Create booking
+- `PUT /api/bookings/:id` — Update booking status (admin)
+- `GET /api/payments` — List payments
+- `POST /api/payment` — Submit payment
+- `PUT /api/payments/:id` — Update payment status (admin)
+- `GET /api/orders` — List orders
+- `POST /api/order-food` — Place food order
+- `PUT /api/orders/:id` — Update order status (admin)
+- `GET /api/analytics` — Get analytics (admin)
+- `POST /api/upload-image` — Upload image to Cloudinary
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+## DB Schema Tables
+- `users` — id, name, email, password, role (admin/customer), createdAt
+- `rooms` — id, title, description, price, imageUrl, isAvailable, createdAt
+- `bookings` — id, userId, roomId, checkIn, checkOut, status (pending/confirmed/rejected), createdAt
+- `payments` — id, bookingId, amount, screenshotUrl, status (pending/approved/rejected), createdAt
+- `orders` — id, userId, itemName, price, status (pending/delivered), createdAt
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
-
-## Root Scripts
-
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
-
-## Packages
-
-### `artifacts/api-server` (`@workspace/api-server`)
-
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+## Environment Variables
+- `DATABASE_URL` — Neon PostgreSQL connection string (configured)
+- `CLOUDINARY_URL` — Cloudinary connection URL (secret, format: cloudinary://api_key:api_secret@cloud_name)
+- `SESSION_SECRET` — JWT signing secret (falls back to hardcoded if not set)

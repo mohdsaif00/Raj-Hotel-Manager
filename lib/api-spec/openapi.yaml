@@ -1,22 +1,33 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Raj Hotel Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: rooms
+    description: Room management
+  - name: bookings
+    description: Booking management
+  - name: payments
+    description: Payment management
+  - name: orders
+    description: Food order management
+  - name: analytics
+    description: Analytics data
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +35,436 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rooms:
+    get:
+      operationId: getRooms
+      tags: [rooms]
+      summary: Get all rooms
+      responses:
+        "200":
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+    post:
+      operationId: createRoom
+      tags: [rooms]
+      summary: Create a room (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomRequest"
+      responses:
+        "201":
+          description: Room created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rooms/{id}:
+    get:
+      operationId: getRoom
+      tags: [rooms]
+      summary: Get a room by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Room details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateRoom
+      tags: [rooms]
+      summary: Update a room (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoomRequest"
+      responses:
+        "200":
+          description: Room updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteRoom
+      tags: [rooms]
+      summary: Delete a room (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Room deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /upload-image:
+    post:
+      operationId: uploadImage
+      tags: [rooms]
+      summary: Upload an image to Cloudinary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadImageRequest"
+      responses:
+        "200":
+          description: Image uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadImageResponse"
+
+  /book-room:
+    post:
+      operationId: bookRoom
+      tags: [bookings]
+      summary: Create a booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookingRequest"
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "409":
+          description: Room already booked for these dates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings:
+    get:
+      operationId: getBookings
+      tags: [bookings]
+      summary: Get bookings (all for admin, own for customer)
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BookingWithDetails"
+
+  /bookings/{id}:
+    put:
+      operationId: updateBooking
+      tags: [bookings]
+      summary: Update booking status (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBookingRequest"
+      responses:
+        "200":
+          description: Booking updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /payment:
+    post:
+      operationId: submitPayment
+      tags: [payments]
+      summary: Submit payment screenshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentRequest"
+      responses:
+        "201":
+          description: Payment submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+
+  /payments:
+    get:
+      operationId: getPayments
+      tags: [payments]
+      summary: Get payments (all for admin, own for customer)
+      responses:
+        "200":
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaymentWithDetails"
+
+  /payments/{id}:
+    put:
+      operationId: updatePayment
+      tags: [payments]
+      summary: Update payment status (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePaymentRequest"
+      responses:
+        "200":
+          description: Payment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /order-food:
+    post:
+      operationId: orderFood
+      tags: [orders]
+      summary: Place a food order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+      responses:
+        "201":
+          description: Order placed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders:
+    get:
+      operationId: getOrders
+      tags: [orders]
+      summary: Get orders (all for admin, own for customer)
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    put:
+      operationId: updateOrder
+      tags: [orders]
+      summary: Update order status (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderRequest"
+      responses:
+        "200":
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analytics:
+    get:
+      operationId: getAnalytics
+      tags: [analytics]
+      summary: Get analytics data (admin only)
+      responses:
+        "200":
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsData"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +475,424 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, customer]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - role
+        - createdAt
+
+    SignupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+      required:
+        - name
+        - email
+        - password
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        imageUrl:
+          type: string
+          nullable: true
+        isAvailable:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - description
+        - price
+        - imageUrl
+        - isAvailable
+        - createdAt
+
+    CreateRoomRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        imageUrl:
+          type: string
+          nullable: true
+        isAvailable:
+          type: boolean
+      required:
+        - title
+        - description
+        - price
+        - isAvailable
+
+    UpdateRoomRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        imageUrl:
+          type: string
+          nullable: true
+        isAvailable:
+          type: boolean
+
+    UploadImageRequest:
+      type: object
+      properties:
+        imageBase64:
+          type: string
+        folder:
+          type: string
+      required:
+        - imageBase64
+
+    UploadImageResponse:
+      type: object
+      properties:
+        url:
+          type: string
+      required:
+        - url
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        roomId:
+          type: integer
+        checkIn:
+          type: string
+          format: date
+        checkOut:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [pending, confirmed, rejected]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - roomId
+        - checkIn
+        - checkOut
+        - status
+        - createdAt
+
+    BookingWithDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        roomId:
+          type: integer
+        checkIn:
+          type: string
+          format: date
+        checkOut:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [pending, confirmed, rejected]
+        createdAt:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/User"
+        room:
+          $ref: "#/components/schemas/Room"
+      required:
+        - id
+        - userId
+        - roomId
+        - checkIn
+        - checkOut
+        - status
+        - createdAt
+        - user
+        - room
+
+    CreateBookingRequest:
+      type: object
+      properties:
+        roomId:
+          type: integer
+        checkIn:
+          type: string
+          format: date
+        checkOut:
+          type: string
+          format: date
+      required:
+        - roomId
+        - checkIn
+        - checkOut
+
+    UpdateBookingRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, confirmed, rejected]
+      required:
+        - status
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        bookingId:
+          type: integer
+        amount:
+          type: number
+        screenshotUrl:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - bookingId
+        - amount
+        - screenshotUrl
+        - status
+        - createdAt
+
+    PaymentWithDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+        bookingId:
+          type: integer
+        amount:
+          type: number
+        screenshotUrl:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        createdAt:
+          type: string
+          format: date-time
+        booking:
+          $ref: "#/components/schemas/BookingWithDetails"
+      required:
+        - id
+        - bookingId
+        - amount
+        - screenshotUrl
+        - status
+        - createdAt
+        - booking
+
+    CreatePaymentRequest:
+      type: object
+      properties:
+        bookingId:
+          type: integer
+        amount:
+          type: number
+        screenshotUrl:
+          type: string
+          nullable: true
+      required:
+        - bookingId
+        - amount
+
+    UpdatePaymentRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+      required:
+        - status
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        itemName:
+          type: string
+        price:
+          type: number
+        status:
+          type: string
+          enum: [pending, delivered]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - itemName
+        - price
+        - status
+        - createdAt
+
+    CreateOrderRequest:
+      type: object
+      properties:
+        itemName:
+          type: string
+        price:
+          type: number
+      required:
+        - itemName
+        - price
+
+    UpdateOrderRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, delivered]
+      required:
+        - status
+
+    MonthlyRevenue:
+      type: object
+      properties:
+        month:
+          type: string
+        revenue:
+          type: number
+      required:
+        - month
+        - revenue
+
+    BookingTrend:
+      type: object
+      properties:
+        month:
+          type: string
+        count:
+          type: integer
+      required:
+        - month
+        - count
+
+    AnalyticsData:
+      type: object
+      properties:
+        totalBookings:
+          type: integer
+        totalRevenue:
+          type: number
+        activeRooms:
+          type: integer
+        pendingPayments:
+          type: integer
+        monthlyRevenue:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyRevenue"
+        bookingTrends:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookingTrend"
+      required:
+        - totalBookings
+        - totalRevenue
+        - activeRooms
+        - pendingPayments
+        - monthlyRevenue
+        - bookingTrends
