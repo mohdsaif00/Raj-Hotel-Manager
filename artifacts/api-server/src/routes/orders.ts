@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, ordersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { authMiddleware, adminMiddleware } from "../lib/auth.js";
+import { authMiddleware, adminMiddleware, customerMiddleware } from "../lib/auth.js";
 
 const router = Router();
 
@@ -12,7 +12,7 @@ function formatOrder(o: typeof ordersTable.$inferSelect) {
   };
 }
 
-router.post("/order-food", authMiddleware, async (req, res) => {
+router.post("/order-food", authMiddleware, customerMiddleware, async (req, res) => {
   try {
     const userId = (req as any).user.userId;
     const { itemName, price } = req.body;

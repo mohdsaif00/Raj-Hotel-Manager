@@ -40,3 +40,12 @@ export function adminMiddleware(req: Request, res: Response, next: NextFunction)
   }
   next();
 }
+
+export function customerMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const user = (req as any).user as JwtPayload | undefined;
+  if (!user || user.role !== "customer") {
+    res.status(403).json({ error: "This action is only available to customers" });
+    return;
+  }
+  next();
+}

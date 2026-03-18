@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, bookingsTable, usersTable, roomsTable } from "@workspace/db";
 import { eq, and, or, lte, gte } from "drizzle-orm";
-import { authMiddleware, adminMiddleware } from "../lib/auth.js";
+import { authMiddleware, adminMiddleware, customerMiddleware } from "../lib/auth.js";
 
 const router = Router();
 
@@ -21,7 +21,26 @@ function formatRoom(r: typeof roomsTable.$inferSelect) {
   };
 }
 
-router.post("/book-room", authMiddleware, async (req, res) => {
+router.get("/rooms/:id/booked-dates", authMiddleware, async (req, res) => {
+  try {
+    const roomId = parseInt(req.params.id);
+    const bookings = await db
+      .select({ checkIn: bookingsTable.checkIn, checkOut: bookingsTable.checkOut })
+      .from(bookingsTable)
+      .where(
+        and(
+          eq(bookingsTable.roomId, roomId),
+          or(eq(bookingsTable.status, "pending"), eq(bookingsTable.status, "confirmed"))
+        )
+      );
+    res.json(bookings);
+  } catch (err) {
+    console.error("BookedDates error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.post("/book-room", authMiddleware, customerMiddleware, async (req, res) => {
   try {
     const userId = (req as any).user.userId;
     const { roomId, checkIn, checkOut } = req.body;
@@ -39,10 +58,7 @@ router.post("/book-room", authMiddleware, async (req, res) => {
       .where(
         and(
           eq(bookingsTable.roomId, roomId),
-          or(
-            eq(bookingsTable.status, "pending"),
-            eq(bookingsTable.status, "confirmed")
-          ),
+          or(eq(bookingsTable.status, "pending"), eq(bookingsTable.status, "confirmed")),
           lte(bookingsTable.checkIn, checkOut),
           gte(bookingsTable.checkOut, checkIn)
         )
