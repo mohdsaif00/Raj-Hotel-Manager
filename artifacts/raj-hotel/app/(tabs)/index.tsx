@@ -8,6 +8,7 @@ import {
   Image,
   FlatList,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -46,7 +47,7 @@ function RoomCard({ room }: { room: Room }) {
 }
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["rooms"],
@@ -56,6 +57,32 @@ export default function HomeScreen() {
   const availableRooms = rooms?.filter((r) => r.isAvailable) || [];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+
+  const handleProfilePress = () => {
+    Alert.alert(
+      user?.name || "Account",
+      `${user?.email}\nRole: ${user?.role === "admin" ? "Administrator" : "Guest"}`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+              { text: "Cancel", style: "cancel" },
+              { text: "Sign Out", style: "destructive", onPress: logout },
+            ]),
+        },
+      ]
+    );
+  };
+
+  const initials = (user?.name || "U")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <ScrollView
@@ -68,8 +95,11 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>{greeting},</Text>
           <Text style={styles.userName}>{user?.name}</Text>
         </View>
-        <TouchableOpacity style={styles.notifBtn} onPress={() => router.push("/(tabs)/bookings")}>
-          <Ionicons name="notifications-outline" size={22} color={Colors.primary} />
+        <TouchableOpacity style={styles.avatarBtn} onPress={handleProfilePress} activeOpacity={0.85}>
+          <Text style={styles.avatarText}>{initials}</Text>
+          <View style={styles.logoutBadge}>
+            <Ionicons name="log-out-outline" size={10} color="#fff" />
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -192,18 +222,38 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginTop: 2,
   },
-  notifBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: Colors.light.card,
+  avatarBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 4,
+    position: "relative",
+  },
+  avatarText: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    letterSpacing: 0.5,
+  },
+  logoutBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: Colors.light.background,
   },
   bannerContainer: {
     paddingHorizontal: 20,
